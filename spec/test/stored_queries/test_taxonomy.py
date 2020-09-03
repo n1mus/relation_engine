@@ -6,8 +6,7 @@ import time
 import unittest
 import requests
 
-from spec.test.helpers import get_config, assert_subset, create_test_docs
-from relation_engine_server.utils.wait_for import wait_for_api
+from spec.test.helpers import get_config, assert_subset, create_test_docs, check_spec_test_env
 
 _CONF = get_config()
 _NOW = int(time.time() * 1000)
@@ -19,7 +18,7 @@ class TestTaxonomy(unittest.TestCase):
     def setUpClass(cls):
         """Create test documents"""
 
-        wait_for_api()
+        check_spec_test_env()
         taxon_docs = [
             {'_key': '1', 'scientific_name': 'Bacteria', 'rank': 'Domain', 'strain': False},
             {'_key': '2', 'scientific_name': 'Firmicutes', 'rank': 'Phylum', 'strain': False},
@@ -272,7 +271,7 @@ class TestTaxonomy(unittest.TestCase):
             })
         )
         self.assertEqual(resp.status_code, 400)
-        self.assertEqual(resp.json()['error'], "123 is not of type 'string'")
+        self.assertEqual(resp.json()['error']['message'], "123 is not of type 'string'")
 
     def test_search_sciname_missing_search(self):
         """Test a query to search sciname with the search_text param missing."""
@@ -282,7 +281,7 @@ class TestTaxonomy(unittest.TestCase):
             data=json.dumps({'ts': _NOW, '@taxon_coll': 'ncbi_taxon'})
         )
         self.assertEqual(resp.status_code, 400)
-        self.assertEqual(resp.json()['error'], "'search_text' is a required property")
+        self.assertEqual(resp.json()['error']['message'], "'search_text' is a required property")
 
     def test_search_sciname_more_complicated(self):
         """Test a query to search sciname with some more keyword options."""
@@ -315,7 +314,7 @@ class TestTaxonomy(unittest.TestCase):
             })
         )
         self.assertEqual(resp.status_code, 400)
-        self.assertEqual(resp.json()['error'], "100001 is greater than the maximum of 100000")
+        self.assertEqual(resp.json()['error']['message'], "100001 is greater than the maximum of 100000")
 
     def test_search_sciname_limit_max(self):
         """Test a query to search sciname with an invalid offset (greater than max)."""
@@ -331,7 +330,7 @@ class TestTaxonomy(unittest.TestCase):
             })
         )
         self.assertEqual(resp.status_code, 400)
-        self.assertEqual(resp.json()['error'], "1001 is greater than the maximum of 1000")
+        self.assertEqual(resp.json()['error']['message'], "1001 is greater than the maximum of 1000")
 
     def test_search_sciname_limit_ranks_implicit_defaults(self):
         """ Test queries where the results are limited by the rank or strain flag. """
@@ -496,7 +495,7 @@ class TestTaxonomy(unittest.TestCase):
             params={'stored_query': 'taxonomy_fetch_taxon_by_sciname'},
             data=json.dumps({'ts': _NOW, 'sciname_field': 'scientific_name', '@taxon_coll': 'ncbi_taxon'})
         ).json()
-        self.assertEqual(resp['error'], "'sciname' is a required property")
+        self.assertEqual(resp['error']['message'], "'sciname' is a required property")
         # No ts
         resp = requests.post(
             _CONF['re_api_url'] + '/api/v1/query_results',
@@ -507,7 +506,7 @@ class TestTaxonomy(unittest.TestCase):
                 '@taxon_coll': 'ncbi_taxon'
             })
         ).json()
-        self.assertEqual(resp['error'], "'ts' is a required property")
+        self.assertEqual(resp['error']['message'], "'ts' is a required property")
         # sciname not found
         resp = requests.post(
             _CONF['re_api_url'] + '/api/v1/query_results',

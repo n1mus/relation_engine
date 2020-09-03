@@ -2,7 +2,10 @@ name: djornl_fetch_all
 description: Fetch all node and edge data from the djornl subgraph
 params:
   type: object
-#  additionalProperties: false
+  additionalProperties: false
+  properties:
+    edge_types:
+      $ref: "../../datasets/djornl/edge_types_filter.yaml"
 query: |
   LET nodes = (
     FOR v IN djornl_node
@@ -10,6 +13,7 @@ query: |
   )
   LET edges = (
     FOR e IN djornl_edge
+      FILTER length(@edge_types) == 0 || e.edge_type IN @edge_types
       RETURN e
   )
   RETURN {nodes, edges}

@@ -2,31 +2,34 @@ name: djornl_fetch_clusters
 description: Fetch all nodes that are members of the specified cluster(s), and the edges and nodes within the specified distance (number of hops) of those nodes.
 params:
   type: object
+  additionalProperties: false
   required: [cluster_ids]
   properties:
     cluster_ids:
+      type: array
       title: Cluster IDs
       description: Cluster IDs, in the form "clustering_system_name:cluster_id"
-      items: {type: string}
+      items:
+        $ref: "../../datasets/djornl/definitions.yaml#definitions/cluster_id"
+      minItems: 1
       examples: [['markov_i2:5', 'markov_i6:2'],['markov_i6:1']]
     distance:
-      type: integer
-      title: Traversal Distance
-      description: How many hops to find neighbors and neighbors-of-neighbors
-      default: 1
-      minimum: 0
-      maximum: 100
+      $ref: "../../datasets/distance.yaml"
+    edge_types:
+      $ref: "../../datasets/djornl/edge_types_filter.yaml"
 query: |
   LET node_ids = (
     FOR n IN djornl_node
       FILTER n.clusters ANY IN @cluster_ids
-      FOR node IN 0..@distance ANY n djornl_edge
+      FOR v, e, p IN 0..@distance ANY n djornl_edge
         OPTIONS {bfs: true, uniqueVertices: "global"}
-        RETURN DISTINCT node._id
+        FILTER length(@edge_types) == 0 || p.edges[*].edge_type ALL IN @edge_types
+        RETURN DISTINCT v._id
   )
   LET edges = (
     FOR edge IN djornl_edge
       FILTER edge._from IN node_ids AND edge._to IN node_ids
+        AND (length(@edge_types) == 0 || edge.edge_type IN @edge_types)
       RETURN edge
   )
   LET nodes = (
